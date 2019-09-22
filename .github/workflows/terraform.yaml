@@ -1,0 +1,30 @@
+name: Build itscaro/terraform
+on:
+  push:
+    branches:
+    - release
+  schedule:
+    - cron:  '0 0 * * *'
+
+jobs:
+  Release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build & Push latest
+      env:
+        TERRAFORM_VERSION: 0.12.9
+        TERRAFORM_VERSION_SHA256SUM: 69712c6216cc09b7eca514b9fb137d4b1fead76559c66f338b4185e1c347ace5
+        DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+        DOCKER_HUB_LOGIN: ${{ secrets.DOCKER_HUB_LOGIN }}
+      run: |
+        curl -sSL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip -o terraform/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+        docker build terraform \
+          --build-arg TERRAFORM_VERSION=${TERRAFORM_VERSION}\
+          --build-arg TERRAFORM_VERSION_SHA256SUM=${TERRAFORM_VERSION_SHA256SUM}\
+          --file terraform/Dockerfile \
+          --tag itscaro/terraform:latest
+        echo "${DOCKER_HUB_TOKEN}" | docker login --username "${DOCKER_HUB_LOGIN}" --password-stdin
+        docker push itscaro/terraform:latest
+        docker tag itscaro/terraform:latest itscaro/terraform:${TERRAFORM_VERSION}
+        docker push itscaro/terraform:${TERRAFORM_VERSION}
